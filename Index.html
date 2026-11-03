@@ -1,0 +1,112 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>صيدليه د محمد رمضان</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial;background:#f1f5f9;color:#172b3a}
+header{background:#087f78;color:white;padding:20px;text-align:center}
+header h2{margin:0 0 8px}
+main{padding:16px;max-width:700px;margin:auto}
+.card{background:white;padding:16px;border-radius:14px;margin-bottom:15px;box-shadow:0 2px 8px #0001}
+input{width:100%;padding:14px;border:1px solid #ccd5df;border-radius:9px;font-size:16px;margin:8px 0}
+button{border:0;padding:12px;border-radius:9px;background:#087f78;color:white;font-size:15px;cursor:pointer}
+.product{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eee;padding:12px 0;gap:8px}
+.product button{white-space:nowrap}
+.total{font-size:22px;font-weight:bold;color:#087f78}
+.small{color:#64748b;font-size:13px}
+</style>
+</head>
+<body>
+<header>
+<h2>صيدليه د محمد رمضان</h2>
+<div>نظام إدارة الصيدلية والمبيعات</div>
+</header>
+<main>
+<div class="card">
+<h3>🔎 البحث عن دواء</h3>
+<input id="search" placeholder="اكتب اسم الدواء أو امسح الباركود">
+<div id="results"></div>
+</div>
+
+<div class="card">
+<h3>🧾 فاتورة البيع</h3>
+<div id="cart">لا توجد أصناف بالفاتورة</div>
+<hr>
+<p>الإجمالي:</p>
+<div class="total" id="total">0.00 جنيه</div>
+<button onclick="finishSale()" style="width:100%;margin-top:15px">إتمام البيع</button>
+</div>
+
+<div class="card">
+<h3>➕ إضافة دواء جديد</h3>
+<input id="name" placeholder="اسم الدواء">
+<input id="barcode" placeholder="الباركود">
+<input id="price" type="number" placeholder="سعر البيع">
+<button onclick="addProduct()">إضافة الدواء</button>
+</div>
+<p class="small">الإصدار الأول - واجهة تجريبية. سيتم ربط البيانات بقاعدة Supabase في الخطوة التالية.</p>
+</main>
+
+<script>
+let products=[
+{name:"دواء تجريبي",barcode:"TEST001",price:25},
+{name:"باراسيتامول",barcode:"TEST002",price:15},
+{name:"فيتامين تجريبي",barcode:"TEST003",price:30}
+];
+let cart=[];
+
+function showProducts(){
+let q=document.getElementById("search").value.trim().toLowerCase();
+let found=products.filter(p=>
+p.name.toLowerCase().includes(q)||p.barcode.includes(q)
+);
+document.getElementById("results").innerHTML=found.map((p,i)=>
+`<div class="product">
+<span>${p.name}<br><small>${p.price} جنيه</small></span>
+<button onclick="addCart(${products.indexOf(p)})">إضافة للفاتورة</button>
+</div>`).join("") || "لا توجد نتائج";
+}
+document.getElementById("search").addEventListener("input",showProducts);
+
+function addProduct(){
+let name=document.getElementById("name").value.trim();
+let barcode=document.getElementById("barcode").value.trim();
+let price=Number(document.getElementById("price").value);
+if(!name||!barcode||price<=0){alert("أدخل بيانات الدواء كاملة");return}
+products.push({name,barcode,price});
+document.getElementById("name").value="";
+document.getElementById("barcode").value="";
+document.getElementById("price").value="";
+showProducts();
+alert("تمت إضافة الدواء في النسخة التجريبية");
+}
+
+function addCart(i){
+let p=products[i];
+let item=cart.find(x=>x.barcode===p.barcode);
+if(item)item.qty++;
+else cart.push({...p,qty:1});
+showCart();
+}
+function showCart(){
+document.getElementById("cart").innerHTML=cart.length?
+cart.map((p,i)=>`<div class="product">
+<span>${p.name} × ${p.qty}<br>${p.price*p.qty} جنيه</span>
+<button onclick="cart.splice(${i},1);showCart()">حذف</button>
+</div>`).join(""):"لا توجد أصناف بالفاتورة";
+let total=cart.reduce((s,p)=>s+p.price*p.qty,0);
+document.getElementById("total").innerText=total.toFixed(2)+" جنيه";
+}
+function finishSale(){
+if(!cart.length){alert("الفاتورة فارغة");return}
+alert("هذه فاتورة تجريبية. لم يتم حفظ البيع في قاعدة البيانات بعد.");
+}
+showProducts();
+</script>
+</body>
+  </html>
+  
