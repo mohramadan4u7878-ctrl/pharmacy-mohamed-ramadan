@@ -5,107 +5,239 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>صيدليه د محمد رمضان</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-*{box-sizing:border-box}
-body{margin:0;font-family:Arial;background:#f1f5f9;color:#172b3a}
-header{background:#087f78;color:white;padding:20px;text-align:center}
-header h2{margin:0 0 8px}
-main{padding:16px;max-width:700px;margin:auto}
-.card{background:white;padding:16px;border-radius:14px;margin-bottom:15px;box-shadow:0 2px 8px #0001}
-input{width:100%;padding:14px;border:1px solid #ccd5df;border-radius:9px;font-size:16px;margin:8px 0}
-button{border:0;padding:12px;border-radius:9px;background:#087f78;color:white;font-size:15px;cursor:pointer}
-.product{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eee;padding:12px 0;gap:8px}
-.product button{white-space:nowrap}
-.total{font-size:22px;font-weight:bold;color:#087f78}
-.small{color:#64748b;font-size:13px}
+body{font-family:Arial;background:#f1f5f9;margin:0;color:#172554}
+header{background:#075985;color:white;padding:20px;text-align:center}
+main{padding:15px;max-width:600px;margin:auto}
+.box{background:white;padding:16px;margin:12px 0;border-radius:12px;box-shadow:0 2px 8px #ddd}
+input,button{width:100%;padding:13px;margin:6px 0;box-sizing:border-box;border-radius:8px;font-size:16px}
+input{border:1px solid #cbd5e1}
+button{background:#0284c7;color:white;border:0;font-weight:bold}
+button.secondary{background:#475569}
+button.danger{background:#dc2626}
+.item{border-bottom:1px solid #ddd;padding:10px 0}
+.total{font-size:23px;font-weight:bold;color:#047857}
+.small{font-size:13px;color:#64748b}
 </style>
 </head>
 <body>
+
 <header>
 <h2>صيدليه د محمد رمضان</h2>
-<div>نظام إدارة الصيدلية والمبيعات</div>
+<p>نظام إدارة المبيعات والمخزون</p>
 </header>
+
 <main>
-<div class="card">
-<h3>🔎 البحث عن دواء</h3>
-<input id="search" placeholder="اكتب اسم الدواء أو امسح الباركود">
+
+<div class="box" id="login">
+<h3>تسجيل الدخول</h3>
+<input id="email" type="email" placeholder="البريد الإلكتروني">
+<input id="password" type="password" placeholder="كلمة المرور">
+<button onclick="login()">دخول</button>
+<p id="loginMsg"></p>
+</div>
+
+<div id="app" style="display:none">
+
+<div class="box">
+<h3>فاتورة بيع جديدة</h3>
+<p id="userInfo" class="small"></p>
+<input id="search" placeholder="ابحث باسم الدواء أو الباركود">
+<button onclick="searchProducts()">بحث عن الدواء</button>
 <div id="results"></div>
 </div>
 
-<div class="card">
-<h3>🧾 فاتورة البيع</h3>
-<div id="cart">لا توجد أصناف بالفاتورة</div>
-<hr>
+<div class="box">
+<h3>الأصناف في الفاتورة</h3>
+<div id="cart"></div>
 <p>الإجمالي:</p>
 <div class="total" id="total">0.00 جنيه</div>
-<button onclick="finishSale()" style="width:100%;margin-top:15px">إتمام البيع</button>
+<button onclick="saveSale()">حفظ الفاتورة</button>
+<p id="saleMsg"></p>
 </div>
 
-<div class="card">
-<h3>➕ إضافة دواء جديد</h3>
-<input id="name" placeholder="اسم الدواء">
-<input id="barcode" placeholder="الباركود">
-<input id="price" type="number" placeholder="سعر البيع">
-<button onclick="addProduct()">إضافة الدواء</button>
+<button class="secondary" onclick="logout()">تسجيل الخروج</button>
 </div>
-<p class="small">الإصدار الأول - واجهة تجريبية. سيتم ربط البيانات بقاعدة Supabase في الخطوة التالية.</p>
 </main>
 
 <script>
-let products=[
-{name:"دواء تجريبي",barcode:"TEST001",price:25},
-{name:"باراسيتامول",barcode:"TEST002",price:15},
-{name:"فيتامين تجريبي",barcode:"TEST003",price:30}
-];
-let cart=[];
+const SUPABASE_URL =
+'https://xmubnftwlifvtodagypq.supabase.co';
 
-function showProducts(){
-let q=document.getElementById("search").value.trim().toLowerCase();
-let found=products.filter(p=>
-p.name.toLowerCase().includes(q)||p.barcode.includes(q)
+const SUPABASE_KEY =
+'sb_publishable_ocN6ChtTSgYb3RgegfQUaA_K-1PTRIY';
+
+const db = window.supabase.createClient(
+SUPABASE_URL, SUPABASE_KEY
 );
-document.getElementById("results").innerHTML=found.map((p,i)=>
-`<div class="product">
-<span>${p.name}<br><small>${p.price} جنيه</small></span>
-<button onclick="addCart(${products.indexOf(p)})">إضافة للفاتورة</button>
-</div>`).join("") || "لا توجد نتائج";
-}
-document.getElementById("search").addEventListener("input",showProducts);
 
-function addProduct(){
-let name=document.getElementById("name").value.trim();
-let barcode=document.getElementById("barcode").value.trim();
-let price=Number(document.getElementById("price").value);
-if(!name||!barcode||price<=0){alert("أدخل بيانات الدواء كاملة");return}
-products.push({name,barcode,price});
-document.getElementById("name").value="";
-document.getElementById("barcode").value="";
-document.getElementById("price").value="";
-showProducts();
-alert("تمت إضافة الدواء في النسخة التجريبية");
+let cart = [];
+
+async function login(){
+ const email=document.getElementById('email').value.trim();
+ const password=document.getElementById('password').value;
+ const msg=document.getElementById('loginMsg');
+
+ const {data,error}=await db.auth.signInWithPassword({
+   email,password
+ });
+
+ if(error){msg.textContent=error.message;return;}
+ showApp(data.user);
 }
 
-function addCart(i){
-let p=products[i];
-let item=cart.find(x=>x.barcode===p.barcode);
-if(item)item.qty++;
-else cart.push({...p,qty:1});
-showCart();
+function showApp(user){
+ document.getElementById('login').style.display='none';
+ document.getElementById('app').style.display='block';
+ document.getElementById('userInfo').textContent=user.email;
 }
-function showCart(){
-document.getElementById("cart").innerHTML=cart.length?
-cart.map((p,i)=>`<div class="product">
-<span>${p.name} × ${p.qty}<br>${p.price*p.qty} جنيه</span>
-<button onclick="cart.splice(${i},1);showCart()">حذف</button>
-</div>`).join(""):"لا توجد أصناف بالفاتورة";
-let total=cart.reduce((s,p)=>s+p.price*p.qty,0);
-document.getElementById("total").innerText=total.toFixed(2)+" جنيه";
+
+async function logout(){
+ await db.auth.signOut();
+ location.reload();
 }
-function finishSale(){
-if(!cart.length){alert("الفاتورة فارغة");return}
-alert("هذه فاتورة تجريبية. لم يتم حفظ البيع في قاعدة البيانات بعد.");
+
+async function searchProducts(){
+ const q=document.getElementById('search').value.trim();
+ const results=document.getElementById('results');
+ if(!q){results.textContent='اكتب اسم الدواء أو الباركود';return;}
+
+ results.textContent='جاري البحث...';
+
+ const {data,error}=await db.from('products')
+ .select('id,barcode,name,unit,sale_price')
+ .or('name.ilike.%'+q+'%,barcode.eq.'+q)
+ .limit(20);
+
+ if(error){results.textContent=error.message;return;}
+
+ results.innerHTML='';
+
+ if(!data.length){
+   results.textContent='لم يتم العثور على الدواء';
+   return;
+ }
+
+ data.forEach(p=>{
+   const div=document.createElement('div');
+   div.className='item';
+
+   const title=document.createElement('b');
+   title.textContent=p.name;
+
+   const info=document.createElement('p');
+   info.textContent='السعر: '+p.sale_price+
+      ' جنيه | الوحدة: '+(p.unit||'');
+
+   const btn=document.createElement('button');
+   btn.textContent='إضافة للفاتورة';
+   btn.onclick=()=>addItem(p);
+
+   div.append(title,info,btn);
+   results.appendChild(div);
+ });
 }
-showProducts();
+
+function addItem(p){
+ let old=cart.find(x=>x.id===p.id);
+
+ if(old){old.quantity++;}
+ else{
+   cart.push({
+     id:p.id,
+     name:p.name,
+     price:Number(p.sale_price),
+     quantity:1
+   });
+ }
+ renderCart();
+}
+
+function renderCart(){
+ const area=document.getElementById('cart');
+ area.innerHTML='';
+ let total=0;
+
+ cart.forEach((p,i)=>{
+   total+=p.price*p.quantity;
+
+   const div=document.createElement('div');
+   div.className='item';
+
+   const name=document.createElement('b');
+   name.textContent=p.name;
+
+   const qty=document.createElement('input');
+   qty.type='number';
+   qty.min='0.01';
+   qty.step='0.01';
+   qty.value=p.quantity;
+   qty.onchange=()=>{
+     const n=Number(qty.value);
+     if(n>0 && Number.isFinite(n)){
+       p.quantity=n;
+       renderCart();
+     }
+   };
+
+   const info=document.createElement('p');
+   info.textContent='السعر: '+p.price+' جنيه';
+
+   const del=document.createElement('button');
+   del.className='danger';
+   del.textContent='حذف';
+   del.onclick=()=>{
+     cart.splice(i,1);
+     renderCart();
+   };
+
+   div.append(name,info,qty,del);
+   area.appendChild(div);
+ });
+
+ document.getElementById('total').textContent=
+ total.toFixed(2)+' جنيه';
+}
+
+async function saveSale(){
+ const msg=document.getElementById('saleMsg');
+
+ if(!cart.length){msg.textContent='الفاتورة فارغة';return;}
+
+ if(!confirm('هل تريد حفظ الفاتورة وخصم الكميات من المخزون؟'))
+ return;
+
+ msg.textContent='جاري الحفظ...';
+
+ const items=cart.map(p=>({
+   product_id:p.id,
+   quantity:p.quantity,
+   unit_price:p.price
+ }));
+
+ const {data,error}=await db.rpc('create_sale',{
+   p_items:items
+ });
+
+ if(error){
+   msg.textContent='تعذر حفظ الفاتورة: '+error.message;
+   return;
+ }
+
+ msg.textContent='تم حفظ الفاتورة رقم: INV-'+data;
+ cart=[];
+ renderCart();
+ document.getElementById('results').innerHTML='';
+ document.getElementById('search').value='';
+}
+
+async function init(){
+ const {data}=await db.auth.getSession();
+ if(data.session)showApp(data.session.user);
+}
+
+init();
 </script>
 </body>
   </html>
