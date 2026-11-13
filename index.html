@@ -29,6 +29,9 @@ h2{color:#087e78}
 <input id="email" type="email" placeholder="البريد الإلكتروني">
 <input id="password" type="password" placeholder="كلمة المرور">
 <button onclick="login()">دخول</button>
+ <button onclick="forgotPassword()" style="background:#64748b">
+نسيت كلمة المرور؟
+</button>
 <p id="message"></p>
 </section>
 
@@ -75,7 +78,27 @@ async function login(){
  document.getElementById("app").style.display="block";
  showProducts();
 }
+async function forgotPassword(){
+ const email=document.getElementById("email").value.trim();
+ const msg=document.getElementById("message");
 
+ if(!email){
+  msg.textContent="اكتب البريد الإلكتروني أولاً";
+  return;
+ }
+
+ msg.textContent="جار إرسال رابط استعادة كلمة المرور...";
+
+ const {error}=await db.auth.resetPasswordForEmail(email,{
+  redirectTo:"https://mohramadan4u7878-ctrl.github.io/pharmacy-mohamed-ramadan/"
+ });
+
+ if(error){
+  msg.textContent="تعذر الإرسال: "+error.message;
+ }else{
+  msg.textContent="تم إرسال رابط الاستعادة إلى بريدك الإلكتروني. راجع صندوق الوارد.";
+ }
+}
 async function logout(){
  await db.auth.signOut();
  location.reload();
